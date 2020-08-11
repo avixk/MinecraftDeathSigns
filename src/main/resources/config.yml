@@ -1,0 +1,14 @@
+# DeathSigns default config
+
+# Time in seconds before signs are available for anyone to take
+signTimeoutSeconds: 600
+
+# Message to send people who clicked someone else's sign.
+#   minutes and seconds till available - {minutes} {seconds}
+#   total seconds till available - {seconds_remaining}
+#   sign owner's name - {sign_owner}
+notYourFuckinSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{minutes} minute(s) §cand §6{seconds} seconds§c."
+
+# Message to send coords to the player
+#   Use {x} {y} {z} and {world}
+deathPrivateMessage: "§cYou Died! Your death coordinates are §6{x}, {y}, {z} §cin §6{world}§c."

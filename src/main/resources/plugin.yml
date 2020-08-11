@@ -1,0 +1,13 @@
+name: DeathSigns
+version: 0.0.1
+api-version: 1.16
+main: me.avixk.DeathSigns.Main
+description: Drops a sign instead of items on death
+authors: [avixk]
+commands:
+  deathsigns:
+    aliases: [deathsign, ds]
+    description: Enable or disable DeathSigns
+permissions:
+  deathsigns.admin:
+    default: op
