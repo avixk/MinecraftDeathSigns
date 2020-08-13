@@ -54,9 +54,13 @@ public class Main extends JavaPlugin {
                     sender.sendMessage("§aYour deathsigns are now §cdisabled§a.");
                 }
                 return true;
-            }if (args[0].equalsIgnoreCase("recover")){
-                sender.sendMessage("§cSorry, the recover command has not been implemented yet.");
-
+            }if (args[0].equalsIgnoreCase("recover") && sender.hasPermission("deathsigns.admin")){
+                int recovered = recoverArea(((Player) sender).getLocation());
+                if(recovered == 0){
+                    sender.sendMessage("§cNo signs found in a 10 block radius.");
+                }else{
+                    sender.sendMessage("§aRecovered §6" + recovered + "§a sign(s).");
+                }
                 return true;
             }
         }
@@ -69,6 +73,14 @@ public class Main extends JavaPlugin {
     }
 
     public static void spawnDeathSign(Block block, Player player, ItemStack[] items) {
+        Main.getPlugin().getLogger().info("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + block.getY() + ", " + block.getZ() + " in " + block.getWorld().getName() + ".");
+        player.sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessage")
+                .replace("{x}",block.getX()+"")
+                .replace("{y}",block.getY()+"")
+                .replace("{z}",block.getZ()+"")
+                .replace("{world}",block.getWorld().getName())
+        );
+
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm MMM/dd/yy");
         LocalDateTime now = LocalDateTime.now();
         String dateTimeString = dtf.format(now);
@@ -95,7 +107,29 @@ public class Main extends JavaPlugin {
             }
         });
     }
-
+    public int recoverArea(Location loc){
+        int recovered = 0;
+        File file = new File(getPlugin().getDataFolder() + "/Inventories/");
+        for(File f : file.listFiles()){
+            Location locFromFile = locationFromString(f.getName().replace(".yml",""));
+            if(loc.getWorld().equals(locFromFile.getWorld())){
+                if(loc.distance(locFromFile) < 10){
+                    recovered++;
+                    ItemStack[] items = recallItems(locFromFile);
+                    for (ItemStack i : items){
+                        if(i!=null) locFromFile.getWorld().dropItem(locFromFile, i);
+                    }
+                    if(locFromFile.getBlock().getType().equals(Material.OAK_SIGN)) locFromFile.getBlock().setType(Material.AIR);
+                    if(locFromFile.getBlock().getRelative(0,-1,0).getType().equals(Material.CRYING_OBSIDIAN))locFromFile.getBlock().getRelative(0,-1,0).setType(Material.AIR);
+                }
+            }
+        }
+        return recovered;
+    }
+    public Location locationFromString(String locString) {
+        String[] s = locString.split("\\.");
+        return new Location(Bukkit.getWorld(s[0]), Integer.parseInt(s[1]), Integer.parseInt(s[2]),Integer.parseInt(s[3]));
+    }
     public static String locationToString(Location loc) {//just turns a location into a string
         return loc.getWorld().getName() + "." + loc.getBlockX() + "." +loc.getBlockY() + "." +loc.getBlockZ();
     }
@@ -116,4 +150,6 @@ public class Main extends JavaPlugin {
         }catch (Exception e){}
         return items;
     }
+
+
 }

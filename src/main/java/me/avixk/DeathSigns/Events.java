@@ -14,23 +14,23 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.text.ParseException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class Events implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event){
         if(Main.disableSignPlayers.contains(event.getEntity().getName())) return;
-        Location deathLocation = event.getEntity().getLocation();
-        event.getEntity().sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessage")
-                .replace("{x}",deathLocation.getBlockX()+"")
-                .replace("{y}",deathLocation.getBlockY()+"")
-                .replace("{z}",deathLocation.getBlockZ()+"")
-                .replace("{world}",deathLocation.getWorld().getName())
-        );
         if(event.getDrops().isEmpty())return;
+
+        Location deathLocation = event.getEntity().getLocation().clone();
+        if(deathLocation.getY() < 3) deathLocation.setY(3);
+
         int radius = 2;    //radius in which it will search for a valid sign placement
         int yradius = 10;    //radius in which it will search for a valid sign placement
-        Block block = event.getEntity().getLocation().getBlock();
+        Block block = deathLocation.getBlock();
+        Bukkit.broadcastMessage(Main.locationToString(block.getLocation()));
         if((block.getType().equals(Material.AIR) ||
                 block.getType().equals(Material.LAVA) ||
                 block.getType().equals(Material.WATER)) && (
@@ -45,6 +45,7 @@ public class Events implements Listener {
             for (int y = 0; y <= yradius; y ++){
                 for (int z = -(radius); z <= radius; z ++){
                     Block nearbyBlock = block.getRelative(x,y,z);
+                    Bukkit.broadcastMessage("testing block "+Main.locationToString(nearbyBlock.getLocation()));
                     if((nearbyBlock.getType().equals(Material.AIR) || nearbyBlock.getType().equals(Material.LAVA) || nearbyBlock.getType().equals(Material.WATER)) && (nearbyBlock.getRelative(0,1,0).getType().equals(Material.AIR) || nearbyBlock.getRelative(0,1,0).getType().equals(Material.LAVA) || nearbyBlock.getRelative(0,1,0).getType().equals(Material.WATER))){
                         Main.spawnDeathSign(nearbyBlock, event.getEntity(),event.getDrops().toArray(new ItemStack[0]));
                         event.getDrops().clear();
@@ -79,6 +80,7 @@ public class Events implements Listener {
             }
         }
     }
+    static Set<String> bedrockDupeBandaid = new HashSet<String>();
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -108,20 +110,29 @@ public class Events implements Listener {
                         e.printStackTrace();
                     }
                 }
+                //patch bedrock event spam
+                if(bedrockDupeBandaid.contains(event.getPlayer().getName()))return;
+                bedrockDupeBandaid.add(event.getPlayer().getName());
+
+                //Bukkit.getLogger().info("DeathSignsDebug 1");
                 Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), new Runnable(){
                     @Override
                     public void run() {
+                        //Bukkit.getLogger().info("DeathSignsDebug 2");
                         ItemStack[] items = Main.recallItems(sign.getLocation());
                         Bukkit.getScheduler().runTask(Main.getPlugin(), new Runnable() {
                             @Override
                             public void run() {
 
+                                //Bukkit.getLogger().info("DeathSignsDebug 3");
                                 event.getClickedBlock().setType(Material.AIR);
                                 event.getClickedBlock().getRelative(0,-1,0).setType(Material.AIR);
 
                                 for (ItemStack i : items){
+                                    //Bukkit.getLogger().info("DeathSignsDebug 4");
                                     if(i!=null) sign.getWorld().dropItem(event.getClickedBlock().getLocation(), i);
                                 }
+                                bedrockDupeBandaid.remove(event.getPlayer().getName());
                             }
                         });
                     }
