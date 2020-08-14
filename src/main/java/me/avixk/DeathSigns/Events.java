@@ -32,21 +32,13 @@ public class Events implements Listener {
         int yradius = 10;    //radius in which it will search for a valid sign placement
         Block block = deathLocation.getBlock();
         //Bukkit.broadcastMessage(Main.locationToString(block.getLocation()));
-        if ((block.getType().equals(Material.AIR) ||
-                block.getType().equals(Material.LAVA) ||
-                block.getType().equals(Material.WATER)) && (
-                block.getRelative(0, 1, 0).getType().equals(Material.AIR) ||
-                        block.getRelative(0, 1, 0).getType().equals(Material.LAVA) ||
-                        block.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
-            Main.spawnDeathSign(block, event.getEntity(), event.getDrops().toArray(new ItemStack[0]));
-            event.getDrops().clear();
-            return;
-        } else
-            for (int x = -(radius); x <= radius; x++) {// scan for a valid sign placement
-                for (int y = 0; y <= yradius; y++) {
-                    for (int z = -(radius); z <= radius; z++) {
+
+        int maxDistance = 5;
+        for (int currentDistance = 0; currentDistance <= maxDistance; currentDistance++) {
+            for (int z = -(currentDistance); z <= currentDistance; z++) {// scan for a valid sign placement
+                for (int x = -(currentDistance); x <= currentDistance; x++) {
+                    for (int y = 0; y <= (currentDistance * 2); y++) {
                         Block nearbyBlock = block.getRelative(x, y, z);
-                        //Bukkit.broadcastMessage("testing block "+Main.locationToString(nearbyBlock.getLocation()));
                         if ((nearbyBlock.getType().equals(Material.AIR) || nearbyBlock.getType().equals(Material.LAVA) || nearbyBlock.getType().equals(Material.WATER)) && (nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.AIR) || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.LAVA) || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
                             Main.spawnDeathSign(nearbyBlock, event.getEntity(), event.getDrops().toArray(new ItemStack[0]));
                             event.getDrops().clear();
@@ -55,6 +47,8 @@ public class Events implements Listener {
                     }
                 }
             }
+        }
+
     }
 
     @EventHandler
