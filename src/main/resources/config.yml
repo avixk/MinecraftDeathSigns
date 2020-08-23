@@ -12,3 +12,4 @@ notYourFuckinSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will
 # Message to send coords to the player
 #   Use {x} {y} {z} and {world}
 deathPrivateMessage: "§cYou Died! Your grave spawned at §6{x}, {y}, {z} §cin §6{world}§c."
+deathPrivateMessageNoGrave: "§cYou Died at §6{x}, {y}, {z} §cin §6{world}§c. Your grave could not be spawned so your items were dropped!"

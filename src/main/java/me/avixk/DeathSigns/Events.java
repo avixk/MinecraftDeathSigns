@@ -15,21 +15,28 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class Events implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (Main.disableSignPlayers.contains(event.getEntity().getName())) return;
-        if (event.getDrops().isEmpty()) return;
+        Main.getPlugin().getLogger().info("§c"+event.getEntity().getName() + " died at " + event.getEntity().getLocation().getBlockX() + ", " + event.getEntity().getLocation().getBlockY() + ", " + event.getEntity().getLocation().getBlockZ() + " in " + event.getEntity().getLocation().getWorld().getName());
+        if (Main.disableSignPlayers.contains(event.getEntity().getName())) {
+            Main.getPlugin().getLogger().info("§c" + event.getEntity().getName() + " has DeathSigns disabled, returning.");
+            return;
+        }
+        if (event.getDrops().isEmpty()) {
+            Main.getPlugin().getLogger().info("§c" + event.getEntity().getName() + "'s inventory is empty, no DeathSign will be placed.'");
+            return;
+        }
 
         Location deathLocation = event.getEntity().getLocation().clone();
         if (deathLocation.getY() < 3) deathLocation.setY(3);
 
-        int radius = 2;    //radius in which it will search for a valid sign placement
-        int yradius = 10;    //radius in which it will search for a valid sign placement
         Block block = deathLocation.getBlock();
         //Bukkit.broadcastMessage(Main.locationToString(block.getLocation()));
 
@@ -39,7 +46,25 @@ public class Events implements Listener {
                 for (int x = -(currentDistance); x <= currentDistance; x++) {
                     for (int y = 0; y <= (currentDistance * 2); y++) {
                         Block nearbyBlock = block.getRelative(x, y, z);
-                        if ((nearbyBlock.getType().equals(Material.AIR) || nearbyBlock.getType().equals(Material.LAVA) || nearbyBlock.getType().equals(Material.WATER)) && (nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.AIR) || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.LAVA) || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
+                        if ((nearbyBlock.getType().equals(Material.AIR)
+                                || nearbyBlock.getType().equals(Material.CAVE_AIR)
+                                || nearbyBlock.getType().equals(Material.LAVA)
+                                || nearbyBlock.getType().equals(Material.WATER))
+                                && (nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.AIR)
+                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.CAVE_AIR)
+                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.LAVA)
+                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
+                            List<ItemStack> drops = new ArrayList<ItemStack>();
+                            drops.addAll(event.getDrops());
+                            for(ItemStack i : drops){
+                                if(i.getType().name().contains("BANNER")){
+                                    if(i.hasItemMeta())
+                                        if(i.getItemMeta().hasDisplayName())
+                                            if(i.getItemMeta().getDisplayName().contains("The Flag"))
+                                                event.getEntity().getWorld().dropItem(event.getEntity().getEyeLocation(),i);
+                                                event.getDrops().remove(i);
+                                }
+                            }
                             Main.spawnDeathSign(nearbyBlock, event.getEntity(), event.getDrops().toArray(new ItemStack[0]));
                             event.getDrops().clear();
                             return;
@@ -48,7 +73,13 @@ public class Events implements Listener {
                 }
             }
         }
-
+        Main.getPlugin().getLogger().info("§cNo valid grave location found for " + event.getEntity().getName() + ", dropping items instead.");
+        event.getEntity().sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessageNoGrave")
+                .replace("{x}",block.getX()+"")
+                .replace("{y}",block.getY()+"")
+                .replace("{z}",block.getZ()+"")
+                .replace("{world}",block.getWorld().getName())
+        );
     }
 
     @EventHandler
@@ -100,7 +131,7 @@ public class Events implements Listener {
         if (event.getPlayer().isSneaking()) return;
         if (event.getClickedBlock().getType().equals(Material.OAK_SIGN)) {
             Sign sign = (Sign) event.getClickedBlock().getState();
-            if (sign.getLine(0).equals("§lR.I.P.")) ;
+            if (!sign.getLine(0).equals("§lR.I.P.")) return;
             if (!sign.getLine(1).equals(event.getPlayer().getName())) {//if the names don't match, no items for u
                 //THIS IS NOT YOUR SIGN FOOL
                 try {
@@ -126,23 +157,25 @@ public class Events implements Listener {
             if (bedrockDupeBandaid.contains(event.getPlayer().getName())) return;
             bedrockDupeBandaid.add(event.getPlayer().getName());
 
-            //Bukkit.getLogger().info("DeathSignsDebug 1");
+            if(sign.getLine(1).equals(event.getPlayer().getName())){
+                Bukkit.getLogger().info("§c" + event.getPlayer().getName() + " reclaimed their DeathSign at " + sign.getX() + ", " + sign.getY() + ", " + sign.getZ() + " in " + sign.getWorld().getName() + ".");
+            }else{
+                Bukkit.getLogger().info("§c" + event.getPlayer().getName() + " claimed " + sign.getLine(1) + "'s DeathSign at " + sign.getX() + ", " + sign.getY() + ", " + sign.getZ() + " in " + sign.getWorld().getName() + ".");
+            }
+
+
             Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), new Runnable() {
                 @Override
                 public void run() {
-                    //Bukkit.getLogger().info("DeathSignsDebug 2");
                     ItemStack[] items = Main.recallItems(sign.getLocation());
                     Bukkit.getScheduler().runTask(Main.getPlugin(), new Runnable() {
                         @Override
                         public void run() {
-
-                            //Bukkit.getLogger().info("DeathSignsDebug 3");
                             event.getClickedBlock().setType(Material.AIR);
                             event.getClickedBlock().getRelative(0, -1, 0).setType(Material.AIR);
 
                             for (ItemStack i : items) {
-                                //Bukkit.getLogger().info("DeathSignsDebug 4");
-                                if (i != null) sign.getWorld().dropItem(event.getClickedBlock().getLocation(), i);
+                                if (i != null) sign.getWorld().dropItem(event.getClickedBlock().getLocation().add(0.5,0.5,0.5), i);
                             }
                             bedrockDupeBandaid.remove(event.getPlayer().getName());
                         }

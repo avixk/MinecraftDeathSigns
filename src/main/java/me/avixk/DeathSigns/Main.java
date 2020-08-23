@@ -62,7 +62,43 @@ public class Main extends JavaPlugin {
                     sender.sendMessage("§aRecovered §6" + recovered + "§a sign(s).");
                 }
                 return true;
-            }
+            }/*if (args[0].equalsIgnoreCase("test") && sender.hasPermission("deathsigns.admin")){
+                Thread thread = new Thread(){
+                    @Override
+                    public void run() {
+                        int maxDistance = 5;
+                        Block block = ((Player) sender).getLocation().getBlock();
+                        for (int currentDistance = 0; currentDistance <= maxDistance; currentDistance++) {
+                            for (int z = -(currentDistance); z <= currentDistance; z++) {// scan for a valid sign placement
+                                for (int x = -(currentDistance); x <= currentDistance; x++) {
+                                    for (int y = 0; y <= (currentDistance * 2); y++) {
+                                        Block nearbyBlock = block.getRelative(x, y, z);
+                                        if ((nearbyBlock.getType().equals(Material.AIR)
+                                                || nearbyBlock.getType().equals(Material.LAVA)
+                                                || nearbyBlock.getType().equals(Material.WATER))
+                                                && (nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.AIR)
+                                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.LAVA)
+                                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
+
+                                        }
+                                        sender.sendMessage(nearbyBlock.getType().name());
+                                        if(nearbyBlock.getType().equals(Material.AIR)){
+                                            ((Player) sender).sendBlockChange(nearbyBlock.getLocation(), Material.GLASS, (byte) 0);
+                                        }
+                                        try {
+                                            Thread.sleep(10);
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                thread.start();
+                return true;
+            }*/
         }
         if(sender.hasPermission("deathsigns.admin")){
             sender.sendMessage("§cUsage: /deathsigns <enable | disable | §4recover§c>");
@@ -73,10 +109,10 @@ public class Main extends JavaPlugin {
     }
 
     public static void spawnDeathSign(Block block, Player player, ItemStack[] items) {
-        Main.getPlugin().getLogger().info("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + block.getY() + ", " + block.getZ() + " in " + block.getWorld().getName() + ".");
+        Main.getPlugin().getLogger().info("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + (block.getY() + 1) + ", " + block.getZ() + " in " + block.getWorld().getName() + ".");
         player.sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessage")
                 .replace("{x}",block.getX()+"")
-                .replace("{y}",block.getY()+"")
+                .replace("{y}",(block.getY()+1)+"")
                 .replace("{z}",block.getZ()+"")
                 .replace("{world}",block.getWorld().getName())
         );
