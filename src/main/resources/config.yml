@@ -4,12 +4,37 @@
 signTimeoutSeconds: 600
 
 # Message to send people who clicked someone else's sign.
-#   minutes and seconds till available - {minutes} {seconds}
-#   total seconds till available - {seconds_remaining}
+#   time until available - {time}
 #   sign owner's name - {sign_owner}
-notYourFuckinSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{minutes} minute(s) §cand §6{seconds} seconds§c."
+notYourFuckinSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{time}§c."
 
 # Message to send coords to the player
 #   Use {x} {y} {z} and {world}
 deathPrivateMessage: "§cYou Died! Your grave spawned at §6{x}, {y}, {z} §cin §6{world}§c."
+
+# Message to send when there is no valid grave placement
 deathPrivateMessageNoGrave: "§cYou Died at §6{x}, {y}, {z} §cin §6{world}§c. Your grave could not be spawned so your items were dropped!"
+
+# Worlds that will spawn DeathSigns
+enable_in_all_worlds: false
+enabled_worlds:
+  - "world"
+  - "world_nether"
+  - "world_the_end"
+
+# Enabling this will broadcast DeathSign creations and claims to players with the permission "deathsigns.admin"
+broadcastSignsToAdmins: true
+
+list_top_text: "&c{player}'s recent DeathSigns:"
+# Placeholders:
+#  {world} - world the sign is located
+#  {X}, {Y}, %Z} - coords of the sign
+#  {status} - see list_status_strings below
+#  {status_time} - how long ago the status was updated
+#  {time} - how long ago the sign spawned
+list_format: " &f- &c{time}&7 ago in &c{world} &7| &c{X}&7, &c{Y}&7, &c{Z} &7| {status} &c{status_time} &7ago"
+list_status_strings:
+  RECOVERED: "&2Recovered"
+  TAKEN: "&4Taken"
+  PROTECTED: "&eProtected"
+  UNPROTECTED: "&cUnprotected"

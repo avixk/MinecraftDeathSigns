@@ -1,7 +1,7 @@
 name: DeathSigns
-version: 0.0.1
-api-version: 1.16
+version: 2.0.1
 main: me.avixk.DeathSigns.Main
+api-version: 1.16
 description: Drops a sign instead of items on death
 authors: [avixk]
 commands:

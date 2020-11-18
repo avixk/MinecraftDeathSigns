@@ -1,8 +1,6 @@
 package me.avixk.DeathSigns;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
@@ -10,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -29,38 +28,101 @@ public class Main extends JavaPlugin {
         this.saveDefaultConfig();
         plugin = this;
         Bukkit.getPluginManager().registerEvents(new Events(),this);
+        Conf.loadSignFile();
     }
     public static List<String> disableSignPlayers = new ArrayList<String>();
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if(!(sender instanceof Player)){
-            sender.sendMessage("§cThis command cannot be run from console.");
-            return true;
-        }
-        if(args.length == 1){
+        if(args.length > 0){
             if (args[0].equalsIgnoreCase("enable") || args[0].equalsIgnoreCase("on")){
-                if(!disableSignPlayers.contains(sender.getName())){
-                    sender.sendMessage("§aYour deathsigns are already enabled.");
-                }else {
-                    disableSignPlayers.remove(sender.getName());
-                    sender.sendMessage("§aYour deathsigns are now enabled.");
+                if(args.length == 1){
+                    if(!disableSignPlayers.contains(sender.getName())){
+                        sender.sendMessage("§aYour DeathSigns are already enabled.");
+                    }else {
+                        disableSignPlayers.remove(sender.getName());
+                        sender.sendMessage("§aYour DeathSigns are now enabled.");
+                    }
+                    return true;
+                }else if(args.length == 2 && sender.hasPermission("deathsigns.admin")){
+                    Player p = Bukkit.getPlayer(args[1]);
+                    if(p == null){
+                        sender.sendMessage("§cPlayer not found.");
+                    }else{
+                        if(!disableSignPlayers.contains(p.getName())){
+                            sender.sendMessage("§a" + p.getName() +"'s DeathSigns are already enabled.");
+                        }else {
+                            disableSignPlayers.remove(p.getName());
+                            sender.sendMessage("§a" + p.getName() +"'s DeathSigns are now enabled.");
+                            p.sendMessage("§a" + sender.getName() +" enabled your DeathSigns.");
+                        }
+                        return true;
+                    }
                 }
-                return true;
             }else if (args[0].equalsIgnoreCase("disable") || args[0].equalsIgnoreCase("off")){
-                if(disableSignPlayers.contains(sender.getName())){
-                    sender.sendMessage("§aYour deathsigns are already §cdisabled§a.");
-                }else {
-                    disableSignPlayers.add(sender.getName());
-                    sender.sendMessage("§aYour deathsigns are now §cdisabled§a.");
+                if(args.length == 1){
+                    if(!disableSignPlayers.contains(sender.getName())){
+                        sender.sendMessage("§aYour DeathSigns are already §cdisabled.");
+                    }else {
+                        disableSignPlayers.remove(sender.getName());
+                        sender.sendMessage("§aYour DeathSigns are now §cdisabled.");
+                    }
+                    return true;
+                }else if(args.length == 2 && sender.hasPermission("deathsigns.admin")){
+                    Player p = Bukkit.getPlayer(args[1]);
+                    if(p == null){
+                        sender.sendMessage("§cPlayer not found.");
+                    }else{
+                        if(disableSignPlayers.contains(p.getName())){
+                            sender.sendMessage("§a" + p.getName() +"'s DeathSigns are already §cdisabled.");
+                        }else {
+                            disableSignPlayers.add(p.getName());
+                            sender.sendMessage("§a" + p.getName() +"'s DeathSigns are now §cdisabled.");
+                            p.sendMessage("§a" + sender.getName() +" §cdisabled§a your DeathSigns.");
+                        }
+                        return true;
+                    }
+                }
+            }else if (args[0].equalsIgnoreCase("list") || args[0].equalsIgnoreCase("ls")){
+                if(args.length == 1){
+                    if(!(sender instanceof Player)){
+                        sender.sendMessage("§cThis command cannot be run from console.");
+                        return true;
+                    }
+                    sender.sendMessage(Conf.getListText(((Player) sender).getUniqueId()));
+                    return true;
+                }else if(args.length == 2 && sender.hasPermission("deathsigns.admin")){
+                    Player p = Bukkit.getPlayer(args[1]);
+                    if(p == null){
+                        sender.sendMessage("§cPlayer not found.");
+                    }else{
+                        sender.sendMessage(Conf.getListText(p.getUniqueId()));
+                        return true;
+                    }
                 }
                 return true;
-            }if (args[0].equalsIgnoreCase("recover") && sender.hasPermission("deathsigns.admin")){
+            }else if (args[0].equalsIgnoreCase("recover")){
+                if(!sender.hasPermission("deathsigns.admin")){
+                    sender.sendMessage("§cYou do not have permission to recover graves. Ask an admin for help.");
+                    return true;
+                }
                 int recovered = recoverArea(((Player) sender).getLocation());
                 if(recovered == 0){
                     sender.sendMessage("§cNo signs found in a 10 block radius.");
                 }else{
                     sender.sendMessage("§aRecovered §6" + recovered + "§a sign(s).");
                 }
+                return true;
+            }else if (args[0].equalsIgnoreCase("test")){
+                if(!sender.hasPermission("deathsigns.admin")){
+                    sender.sendMessage("§cYou do not have permission to recover graves. Ask an admin for help.");
+                    return true;
+                }
+                Player p = (Player) sender;
+                Location l1 = p.getLocation().getBlock().getLocation().clone().add(.5,0,.5), l2 = l1.clone().add(0,1,0);
+                p.getWorld().playSound(l1, Sound.BLOCK_WOOD_BREAK,1,1);
+                p.getWorld().spawnParticle(Particle.BLOCK_DUST, l1, 50, .5,.5,.5, Material.OAK_PLANKS.createBlockData());
+                p.getWorld().playSound(l2, Sound.BLOCK_STONE_BREAK,1,1);
+                p.getWorld().spawnParticle(Particle.BLOCK_DUST, l2, 50, .5,.5,.5, Material.CRYING_OBSIDIAN.createBlockData());
                 return true;
             }/*if (args[0].equalsIgnoreCase("test") && sender.hasPermission("deathsigns.admin")){
                 Thread thread = new Thread(){
@@ -101,15 +163,15 @@ public class Main extends JavaPlugin {
             }*/
         }
         if(sender.hasPermission("deathsigns.admin")){
-            sender.sendMessage("§cUsage: /deathsigns <enable | disable | §4recover§c>");
+            sender.sendMessage("§cAdmin Usage: /deathsigns <enable | disable | list | §4recover§c> §4[player]");
         }else{
-            sender.sendMessage("§cUsage: /deathsigns <enable | disable>");
+            sender.sendMessage("§cUsage: /deathsigns <enable | disable | list>");
         }
         return true;
     }
 
     public static void spawnDeathSign(Block block, Player player, ItemStack[] items) {
-        Main.getPlugin().getLogger().info("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + (block.getY() + 1) + ", " + block.getZ() + " in " + block.getWorld().getName() + ".");
+        Bukkit.broadcast("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + (block.getY() + 1) + ", " + block.getZ() + " in " + block.getWorld().getName() + ".", "deathsigns.admin");
         player.sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessage")
                 .replace("{x}",block.getX()+"")
                 .replace("{y}",(block.getY()+1)+"")
@@ -137,11 +199,19 @@ public class Main extends JavaPlugin {
             public void run() {
                 try {
                     saveItems(signBlock.getLocation(), items);
+                    Conf.addSign(signBlock.getLocation(),player.getUniqueId());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         });
+        Location l1 = sign.getLocation().clone().add(.5,0,.5), l2 = block.getLocation().clone().add(.5,0,.5);
+        player.getWorld().playSound(l1, Sound.BLOCK_WOOD_BREAK,1,1);
+        player.getWorld().spawnParticle(Particle.BLOCK_DUST, l1, 50, .5,.5,.5, Material.OAK_PLANKS.createBlockData());
+        player.getWorld().playSound(l2, Sound.BLOCK_STONE_BREAK,1,1);
+        player.getWorld().spawnParticle(Particle.BLOCK_DUST, l2, 50, .5,.5,.5, Material.CRYING_OBSIDIAN.createBlockData());
+        //player.getWorld().spawnParticle(Particle.BLOCK_DUST, sign.getLocation(), 100, new MaterialData(Material.OAK_PLANKS));
+        //player.getWorld().spawnParticle(Particle.BLOCK_DUST, block.getLocation(), 100, new MaterialData(Material.CRYING_OBSIDIAN));
     }
     public int recoverArea(Location loc){
         int recovered = 0;
@@ -155,6 +225,7 @@ public class Main extends JavaPlugin {
                     for (ItemStack i : items){
                         if(i!=null) locFromFile.getWorld().dropItem(locFromFile, i);
                     }
+                    Conf.setStatus(locFromFile,"RECOVERED");
                     if(locFromFile.getBlock().getType().equals(Material.OAK_SIGN)) locFromFile.getBlock().setType(Material.AIR);
                     if(locFromFile.getBlock().getRelative(0,-1,0).getType().equals(Material.CRYING_OBSIDIAN))locFromFile.getBlock().getRelative(0,-1,0).setType(Material.AIR);
                 }
@@ -185,6 +256,10 @@ public class Main extends JavaPlugin {
             file.delete();
         }catch (Exception e){}
         return items;
+    }
+
+    public static void saveLastDeathLocation(){
+        
     }
 
 
