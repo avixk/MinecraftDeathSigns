@@ -245,7 +245,7 @@ public class Events implements Listener {
                     }
                 });
             }
-            if(event.getPlayer().hasPermission("deathsigns.admin")) {
+            if(event.getPlayer().hasPermission("deathsigns.admin") && !sign.getLine(1).equals(event.getPlayer().getName())) {
                 return;
             }
             if(event.getPlayer().getGameMode().equals(GameMode.SPECTATOR))return;

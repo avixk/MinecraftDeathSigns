@@ -188,46 +188,10 @@ public class Main extends JavaPlugin {
                 }
                 reloadConfig();
                 return true;
-            }/*if (args[0].equalsIgnoreCase("test") && sender.hasPermission("deathsigns.admin")){
-                Thread thread = new Thread(){
-                    @Override
-                    public void run() {
-                        int maxDistance = 5;
-                        Block block = ((Player) sender).getLocation().getBlock();
-                        for (int currentDistance = 0; currentDistance <= maxDistance; currentDistance++) {
-                            for (int z = -(currentDistance); z <= currentDistance; z++) {// scan for a valid sign placement
-                                for (int x = -(currentDistance); x <= currentDistance; x++) {
-                                    for (int y = 0; y <= (currentDistance * 2); y++) {
-                                        Block nearbyBlock = block.getRelative(x, y, z);
-                                        if ((nearbyBlock.getType().equals(Material.AIR)
-                                                || nearbyBlock.getType().equals(Material.LAVA)
-                                                || nearbyBlock.getType().equals(Material.WATER))
-                                                && (nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.AIR)
-                                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.LAVA)
-                                                || nearbyBlock.getRelative(0, 1, 0).getType().equals(Material.WATER))) {
-
-                                        }
-                                        sender.sendMessage(nearbyBlock.getType().name());
-                                        if(nearbyBlock.getType().equals(Material.AIR)){
-                                            ((Player) sender).sendBlockChange(nearbyBlock.getLocation(), Material.GLASS, (byte) 0);
-                                        }
-                                        try {
-                                            Thread.sleep(10);
-                                        } catch (InterruptedException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                };
-                thread.start();
-                return true;
-            }*/
+            }
         }
         if(sender.hasPermission("deathsigns.admin")){
-            sender.sendMessage("§cAdmin Usage: /deathsigns <enable | disable | list | §4recover§c> §4[player]");
+            sender.sendMessage("§cAdmin Usage: /deathsigns <§4reload | recover§c | enable | disable | list> §4[player]");
         }else{
             sender.sendMessage("§cUsage: /deathsigns <enable | disable | list>");
         }
