@@ -6,7 +6,7 @@ signTimeoutSeconds: 600
 # Message to send people who clicked someone else's sign.
 #   time until available - {time}
 #   sign owner's name - {sign_owner}
-notYourFuckinSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{time}§c."
+notYourSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{time}§c."
 
 # Message to send coords to the player
 #   Use {x} {y} {z} and {world}
@@ -22,9 +22,15 @@ enabled_worlds:
   - "world_nether"
   - "world_the_end"
 
-# Enabling this will broadcast DeathSign creations and claims to players with the permission "deathsigns.admin"
-broadcastSignsToAdmins: true
+# When this is disabled, the sign will break when right clicked as opposed to opening a sign inventory.
+# Disable this if you find a severe bug in the inventory system.
+use_sign_inventory: true
 
+# Enabling this will broadcast DeathSign creations and claims to players with the permission "deathsigns.admin"
+broadcastSignsToAdmins: false
+
+# Max number of death signs to show in /deathsigns list
+recentDeathSignsMax: 8
 list_top_text: "&c{player}'s recent DeathSigns:"
 # Placeholders:
 #  {world} - world the sign is located
@@ -32,9 +38,11 @@ list_top_text: "&c{player}'s recent DeathSigns:"
 #  {status} - see list_status_strings below
 #  {status_time} - how long ago the status was updated
 #  {time} - how long ago the sign spawned
-list_format: " &f- &c{time}&7 ago in &c{world} &7| &c{X}&7, &c{Y}&7, &c{Z} &7| {status} &c{status_time} &7ago"
+list_format: " &f- in &c{world} &7| &c{X}&7, &c{Y}&7, &c{Z} &7| Spawned &c{time}&7 ago  \n    &8 [{status}&8] &7as of &c{status_time} &7ago"
 list_status_strings:
   RECOVERED: "&2Recovered"
   TAKEN: "&4Taken"
-  PROTECTED: "&eProtected"
-  UNPROTECTED: "&cUnprotected"
+  PROTECTED: "&aProtected"
+  UNPROTECTED: "&eUnprotected"
+  OPENED_OWNER: "&2Opened"
+  OPENED_OTHER: "&4Breached"
