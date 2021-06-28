@@ -1,44 +1,102 @@
-# DeathSigns default config
+ # DeathSigns default config
 
-# Time in seconds before signs are available for anyone to take
-signTimeoutSeconds: 600
+log_death_locations_to_console: true
 
-# Message to send people who clicked someone else's sign.
-#   time until available - {time}
-#   sign owner's name - {sign_owner}
-notYourSignMessage: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{time}§c."
+time_format: "HH:mm MMM/dd/yy"
 
-# Message to send coords to the player
-#   Use {x} {y} {z} and {world}
-deathPrivateMessage: "§cYou Died! Your grave spawned at §6{x}, {y}, {z} §cin §6{world}§c."
+ # Time in seconds before signs are available for anyone to take, set to -1 to disable
+sign_timeout_seconds: 600
 
-# Message to send when there is no valid grave placement
-deathPrivateMessageNoGrave: "§cYou Died at §6{x}, {y}, {z} §cin §6{world}§c. Your grave could not be spawned so your items were dropped!"
+ # NOT IMPLEMENTED YET
+ # set how many minutes a deathsign should last before breaking itself, set to -1 to disable
+deathsign_expires_after_minutes: -1
 
-# Worlds that will spawn DeathSigns
+ # Message to send people who clicked someone else's sign.
+ #   time until available - {time}
+ #   sign owner's name - {sign_owner}
+sign_protected_message: "§cThis is §a{sign_owner}§c's sign. Protection will expire in §6{time}§c."
+
+ # Message to send coords to the player
+ #   Use {x} {y} {z} and {world}
+ #     also {price} and {free} are applicable in some messages.
+death_private_message:
+  couldnt_spawn: '§cYou Died at §6{x}, {y}, {z} §cin §6{world}§c. Your grave could not be spawned so your items were dropped!'
+  no_cost: '§cYou Died! Your deathsign spawned at §6{x}, {y}, {z} §cin §6{world}§c.'
+  cost:
+    used_free: '§cYour deathsign spawned at §6{x}, {y}, {z} §cin §6{world}§c. &cYou have {free} free deathsigns remaining.'
+    used_last_free: '§cYour deathsign spawned at §6{x}, {y}, {z} §cin §6{world}§c. &cYou just used your last free deathsign! Extra deathsigns will cost ${price} each.'
+    not_enough_money: '§cYou Died at §6{x}, {y}, {z} §cin §6{world}§c. You cannot afford ${price} for a deathsign so your inventory was dropped!'
+    success: '§cYour deathsign spawned at §6{x}, {y}, {z} §cin §6{world}§c. &c${price} was removed from your balance to purchase it.'
+
+ # if true, deathsigns will only spawn for players with permission deathsigns.deathsign
+deathsigns_require_permission: false # permission: deathsigns.deathsign
+
+bounties_disable_deathsigns: true # REQUIRES BOUNTIES
+
+ # settings for deathsign compasses
+ # available placeholders:
+ # {x} {y} {z} and {world} - location
+ # {death_message} - death message
+ # {player} - the owner of the deathsign
+death_compass:
+  require_permission: false # permission: deathsigns.compass
+  enabled: true
+  give_on_respawn:
+    enabled: true
+    require_permission: false # permission: deathsigns.compass.ondeath
+    delay: -1 # Time in ticks to wait after a player respawns to give them a compass. set to -1 to give instantly. Set higher to attempt to work around multiverse inventories.
+  only_give_if_respawn_world:
+    enabled: false
+    worlds:
+      - 'world'
+      - 'world_nether'
+      - 'world_the_end'
+      - 'flat'
+  name: '&b{player}''s DeathSign'
+  lore:
+    - '&cPoints to a DeathSign at &6{x}&c, &6{y}&c, &6{z}&c in &6{world}'
+    - '&7{death_message}'
+  # click_text placeholders: {distance} {distance_color}
+  click_text: '&cThe deathsign is &6{distance_color}&c blocks away.'
+  click_beam_effect: true
+  click_cooldown_ticks: 100
+econ:
+  deathsign:
+    cost_enabled: false
+    cost: 1 # cost to spawn a deathsign
+    reward_enabled: false
+    reward: 1 # reward for breaking a deathsign
+    free: 5 # number of free deathsigns per person before they must start paying
+
+ # Worlds that will spawn DeathSigns
+ # enable_in_all_worlds overrides enabled_worlds
 enable_in_all_worlds: false
 enabled_worlds:
   - "world"
   - "world_nether"
   - "world_the_end"
 
-# When this is disabled, the sign will break when right clicked as opposed to opening a sign inventory.
-# Disable this if you find a severe bug in the inventory system.
+ # When this is disabled, the sign will break when right clicked as opposed to opening a sign inventory.
+ # Disable this if you find a severe bug in the inventory system.
 use_sign_inventory: true
 
-# Enabling this will broadcast DeathSign creations and claims to players with the permission "deathsigns.admin"
+ # Enabling this will broadcast DeathSign creations and claims to players with the permission "deathsigns.admin"
 broadcastSignsToAdmins: false
 
-# Max number of death signs to show in /deathsigns list
-recentDeathSignsMax: 8
-list_top_text: "&c{player}'s recent DeathSigns:"
-# Placeholders:
-#  {world} - world the sign is located
-#  {X}, {Y}, %Z} - coords of the sign
-#  {status} - see list_status_strings below
-#  {status_time} - how long ago the status was updated
-#  {time} - how long ago the sign spawned
-list_format: " &f- in &c{world} &7| &c{X}&7, &c{Y}&7, &c{Z} &7| Spawned &c{time}&7 ago  \n    &8 [{status}&8] &7as of &c{status_time} &7ago"
+ # Max number of death signs to show in /deathsigns list
+list_page_size: 8
+list_top_text: "&7┌[&#b80000&lD&#af0404&le&#a70808&la&#9f0d0d&lt&#971111&lh&#8f1515&lS&#871a1a&li&#7f1e1e&lg&#772222&ln&#6f2727&ls &fv{version} &7&oby avixk &f&l| &c&l{player}&7&l's recent DeathSigns:"
+list_bottom_text: "&7└ &7Page &c{page}&7 of &c{pages} &8&o/ds list [page]"
+ # Placeholders:
+ #  {world} - world the sign is located
+ #  {X}, {Y}, %Z} - coords of the sign
+ #  {status} - see list_status_strings below
+ #  {status_time} - how long ago the status was updated
+ #  {time} - how long ago the sign spawned
+ #  {id} - used to select deathsigns
+list_format: "&7├ &f{id}. &7In &f{world} &7| &f{X}&7, &f{Y}&7, &f{Z} &7| Spawned &c{time}&7 ago  \n&7│    &8 [{status}&8] &7as of &c{status_time} &7ago"
+list_format_error: "&7├ &f{id}. &cInvalid DeathSign\n&7│" # Always plan for failure. This format will be used if the config entry is malformed or the world is removed.
+list_format_no_deathsigns: "&7└ &c&oNo DeathSigns Found."
 list_status_strings:
   RECOVERED: "&2Recovered"
   TAKEN: "&4Taken"
@@ -46,3 +104,79 @@ list_status_strings:
   UNPROTECTED: "&eUnprotected"
   OPENED_OWNER: "&2Opened"
   OPENED_OTHER: "&4Breached"
+  DESTROYED: "&4Destroyed"
+
+destroy_command:
+  require_permission: false
+  confirm_message: '&eYou are about to destroy your deathsign number &c{id}&e. All items will be lost. If you''re sure you want to do this, type &7/ds confirm&e.'
+  confirmed_message: '&cBoom~'
+  explosion:
+    enabled: true
+    fixed_size_instead_of_item_worth: false
+    fixed_size: 2
+    item_worth_multiplier: 1
+    item_worth: # if using item worth, the explosion size will depend on item worth. For each of the items below, that amount is added to the explosion radius.
+      ELYTRA: 2
+      ANCIENT_DEBRIS: 0.5
+      NETHERITE_INGOT: 1
+      NETHERITE_SCRAP: 0.5
+      NETHERITE_HELMET: 0.9
+      NETHERITE_CHESTPLATE: 1
+      NETHERITE_LEGGINGS: 0.9
+      NETHERITE_BOOTS: 0.8
+      NETHERITE_SHOVEL: 0.7
+      NETHERITE_PICKAXE: 1
+      NETHERITE_AXE: 0.8
+      NETHERITE_SWORD: 0.8
+      NETHERITE_HOE: 0.8
+      NETHERITE_BLOCK: 3
+      DIAMOND_BLOCK: 0.7
+      DIAMOND: 0.2
+      DIAMOND_HELMET: 0.4
+      DIAMOND_CHESTPLATE: 0.5
+      DIAMOND_LEGGINGS: 0.4
+      DIAMOND_BOOTS: 0.3
+      DIAMOND_SHOVEL: 0.2
+      DIAMOND_PICKAXE: 0.5
+      DIAMOND_AXE: 0.3
+      DIAMOND_SWORD: 0.3
+      DIAMOND_HOE: 0.2
+      BEACON: 1
+      EMERALD: 0.02
+      IRON_BLOCK: 0.05
+      IRON: 0.01
+      IRON_HELMET: 0.02
+      IRON_CHESTPLATE: 0.05
+      IRON_LEGGINGS: 0.04
+      IRON_BOOTS: 0.03
+      IRON_SHOVEL: 0.02
+      IRON_PICKAXE: 0.05
+      IRON_AXE: 0.03
+      IRON_SWORD: 0.03
+      IRON_HOE: 0.02
+      SHULKER_BOX: 2
+      WHITE_SHULKER_BOX: 2
+      ORANGE_SHULKER_BOX: 2
+      MAGENTA_SHULKER_BOX: 2
+      LIGHT_BLUE_SHULKER_BOX: 2
+      YELLOW_SHULKER_BOX: 2
+      LIME_SHULKER_BOX: 2
+      PINK_SHULKER_BOX: 2
+      GRAY_SHULKER_BOX: 2
+      LIGHT_GRAY_SHULKER_BOX: 2
+      CYAN_SHULKER_BOX: 2
+      PURPLE_SHULKER_BOX: 2
+      BLUE_SHULKER_BOX: 2
+      BROWN_SHULKER_BOX: 2
+      GREEN_SHULKER_BOX: 2
+      RED_SHULKER_BOX: 2
+      BLACK_SHULKER_BOX: 2
+      SHULKER_SHELL: 0.1
+      ENCHANTED_GOLDEN_APPLE: 0.1
+      MUSIC_DISC_PIGSTEP: 3
+      EXPERIENCE_BOTTLE: 0.01
+      END_CRYSTAL: 0.1
+      TNT: 0.02
+      TRIDENT: 2
+      TOTEM_OF_UNDYING: 1
+

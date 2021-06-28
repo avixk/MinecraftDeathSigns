@@ -1,9 +1,10 @@
 name: DeathSigns
-version: 2.0.2
+version: 2.1.1
 main: me.avixk.DeathSigns.Main
 api-version: 1.16
 description: Drops a sign instead of items on death
 authors: [avixk]
+softdepend: [Vault, HeadHunting]
 commands:
   deathsigns:
     aliases: [ds]
@@ -11,3 +12,23 @@ commands:
 permissions:
   deathsigns.admin:
     default: op
+    description: Players with this permission can access admin features.
+    children:
+      deathsigns.compass: true
+      deathsigns.deathsign: true
+      deathsigns.destroy: true
+  deathsigns.compass:
+    default: op
+    description: Allows players to use /ds compass.
+  deathsigns.compass.on_respawn:
+    default: op
+    description: Allows players to get a death compass on death.
+  deathsigns.deathsign:
+    default: op
+    description: If enabled, players must have this node to use deathsigns.
+  deathsigns.destroy:
+    default: op
+    description: Allows players to destroy their signs.
+  deathsigns.destroy.other:
+    default: op
+    description: Allows players to destroy other players' signs.

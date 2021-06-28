@@ -2,59 +2,72 @@ package me.avixk.DeathSigns;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class Main extends JavaPlugin {
-    private static Main plugin;
+    public static Main plugin;
     public static Main getPlugin(){
         return plugin;
     }
     @Override
     public void onEnable() {
+
         this.saveDefaultConfig();
         plugin = this;
+        DeathSignHandler.key = new NamespacedKey(Main.getPlugin(), "deathsigns.compass");
         //Events.registerTab();
         Bukkit.getPluginManager().registerEvents(new Events(),this);
         Conf.loadSignFile();
+        Events.compass = getConfig().getBoolean("death_compass.enable");
+
+        if(Econ.setupEconomy())
+            Bukkit.getLogger().info("Vault hooked. Economy support enabled.");
+        else
+            Bukkit.getLogger().info("Vault not found. Economy support disabled.");
+
+        if(BountyHook.init())
+            Bukkit.getLogger().info("HeadHunting hooked. Bounty support enabled.");
+        else
+            Bukkit.getLogger().info("HeadHunting not found. Bounty support disabled.");
+
+        Conf.loadConfigOptions();
     }
 
     @Override
     public void onDisable() {
         Bukkit.getLogger().info("Disabling DeathSigns, saving inventories...");
         long timenow = System.currentTimeMillis();
-        int failed = 0;
+        //int failed = 0;
         int saved = 0;
-        for(Map.Entry<Location, Inventory> e : ((HashMap<Location,Inventory>)openSigns.clone()).entrySet()){
-            try {
-                saveItems(e.getKey(),e.getValue().getContents().clone(),null);
-                saved++;
-            } catch (IOException ioException) {
-                failed++;
-                ioException.printStackTrace();
-            }
+        for(DeathSign e : DeathSignHandler.openSigns){
+            e.saveItems();
+            saved++;
         }
-        openSigns.clear();
+        DeathSignHandler.openSigns.clear();
         Bukkit.getLogger().info("Successfully saved " + saved + " inventories in " + (System.currentTimeMillis() - timenow) + " ms.");
-        if(failed != 0)Bukkit.getLogger().info(failed + " inventories failed to save.");
+        //if(failed != 0)Bukkit.getLogger().info(failed + " inventories failed to save.");
     }
 
     public static List<String> disableSignPlayers = new ArrayList<String>();
-    public static HashMap<Location, Inventory> openSigns = new HashMap<Location, Inventory>();
+    public static HashMap<String,DeathSign> destroyConfirmPlayers = new HashMap<>();
+    public static HashMap<String,Integer> destroyConfirmPlayerTasks = new HashMap<>();
+    //public static HashMap<Location, Inventory> openSigns = new HashMap<Location, Inventory>();
+    //public static List<DeathSign> openSigns = new ArrayList<>();
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if(args.length > 0){
@@ -107,22 +120,187 @@ public class Main extends JavaPlugin {
                     }
                 }
             }else if (args[0].equalsIgnoreCase("list") || args[0].equalsIgnoreCase("ls")){
+                int page = 1;
+                UUID player = null;
                 if(args.length == 1){
                     if(!(sender instanceof Player)){
                         sender.sendMessage("§cThis command cannot be run from console.");
                         return true;
                     }
-                    sender.sendMessage(Conf.getListText(((Player) sender).getUniqueId()));
-                    return true;
-                }else if(args.length == 2 && sender.hasPermission("deathsigns.admin")){
+                    player = ((Player) sender).getUniqueId();
+                }else if(args.length == 2){
                     OfflinePlayer p = Bukkit.getOfflinePlayer(args[1]);
-                    if(p == null){
-                        sender.sendMessage("§cPlayer not found.");
+                    if(p == null || !p.hasPlayedBefore()){
+                        try {
+                            page = Integer.parseInt(args[1]);
+                            if(!(sender instanceof Player)){
+                                sender.sendMessage("§cThis command cannot be run from console.");
+                                return true;
+                            }
+                            player = ((Player) sender).getUniqueId();
+                        }catch (Exception e){
+                            sender.sendMessage("§cPlayer not found.");
+                            return true;
+                        }
                     }else{
-                        sender.sendMessage(Conf.getListText(p.getUniqueId()));
+                        player = p.getUniqueId();
+                    }
+                }else if(args.length == 3){
+                    OfflinePlayer p = Bukkit.getOfflinePlayer(args[1]);
+                    if(p == null || !p.hasPlayedBefore()){
+                        sender.sendMessage("§cPlayer not found.");
+                        return true;
+                    }
+                    player = p.getUniqueId();
+                    try {
+                        page = Integer.parseInt(args[2]);
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns list [player] [page #]");
                         return true;
                     }
                 }
+                if(sender instanceof Player && player != ((Player) sender).getUniqueId() && !sender.hasPermission("deathsigns.admin")){
+                    sender.sendMessage("§cYou do not have permission to see other people's DeathSigns.");
+                    return true;
+                }
+                sender.sendMessage(Conf.getListText(player, page));
+                return true;
+            }else if (args[0].equalsIgnoreCase("compass")){
+                //ds compass 1
+                if(!(sender instanceof Player)){
+                    sender.sendMessage("§cThis command cannot be run from console.");
+                    return true;
+                }
+                if(Main.plugin.getConfig().getBoolean("death_compass.require_permission") && !(sender.hasPermission("deathsigns.compass"))){
+                    sender.sendMessage("§cYou do not have permission to run this command.");
+                    return true;
+                }
+                int sign = -1;
+                UUID target = ((Player) sender).getUniqueId();
+                if(args.length == 2){
+                    try {
+                        sign = Integer.parseInt(args[1]);
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns compass §c[sign number]");
+                        return true;
+                    }
+                }else if(args.length == 3){
+                    try {
+                        sign = Integer.parseInt(args[2]);
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns compass [player] §c[sign number]");
+                        return true;
+                    }
+                    try {
+                        target = Bukkit.getOfflinePlayer(args[1]).getUniqueId();
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns compass §c[player] §7[sign number]");
+                        return true;//TODO FIX THIS SHIT
+                    }
+                }
+                if(sign == -1) sign = Conf.getLastID(target);
+                if(sign <= 0){
+                    sender.sendMessage("§cDeathSign not found, sign " + sign + " does not exist.");
+                    return true;
+                }
+                DeathSign deathSign = DeathSignHandler.getDeathSignFromIdentifier(target + "." + sign);
+                if(deathSign == null){
+                    sender.sendMessage("§cDeathSign not found. Check the sign ID and try again.");
+                    return true;
+                }
+                String status = deathSign.getStatus();
+                if(status == null){
+                    sender.sendMessage("§cDeathSign not found.");
+                    return true;
+                }
+                if(status.equals("RECOVERED")){
+                    sender.sendMessage("§cYou already broke this deathsign.");
+                    return true;
+                }
+                if(status.equals("TAKEN")){
+                    sender.sendMessage("§cSomeone already broke this deathsign.");
+                    return true;
+                }
+                //sender.sendMessage();
+                //ItemStack comp = getDeathsignCompass(Bukkit.getOfflinePlayer(dsign.owner).getName(),targetLocation,dsign.deathMessage, sign);
+                ((Player) sender).getInventory().addItem(deathSign.getDeathsignCompass());
+                sender.sendMessage("§aEnjoy your compass.");
+                return true;
+            }else if (args[0].equalsIgnoreCase("destroy")){
+                //ds compass 1
+                if(!(sender instanceof Player)){
+                    sender.sendMessage("§cThis command cannot be run from console.");
+                    return true;
+                }
+                OfflinePlayer target = (OfflinePlayer) sender;
+                if(Main.plugin.getConfig().getBoolean("command_destroy.require_permission") && !(sender.hasPermission("deathsigns.destroy"))){
+                    sender.sendMessage("§cYou do not have permission to run this command.");
+                    return true;
+                }
+                int sign = Conf.getLastID(((Player) sender).getUniqueId());
+                if(args.length == 1){
+                    sender.sendMessage("§7Usage: /deathsigns destroy §c[sign number]");
+                    return true;
+                }else if(args.length == 2){
+                    try {
+                        sign = Integer.parseInt(args[1]);
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns destroy §c[sign number]");
+                        return true;
+                    }
+                }else if(args.length == 3 && sender.hasPermission("deathsigns.destroy.other")){
+                    try {
+                        target = Bukkit.getOfflinePlayer(args[1]);
+                        if(!target.hasPlayedBefore()){
+                            sender.sendMessage("§7Usage: /deathsigns destroy §c[player] §7[sign number]");
+                            return true;
+                        }
+                        sign = Integer.parseInt(args[2]);
+                    }catch (Exception e){
+                        sender.sendMessage("§7Usage: /deathsigns destroy [player] §c[sign number]");
+                        return true;
+                    }
+                }
+                if(sign <= 0){
+                    sender.sendMessage("§cDeathSign not found, sign " + sign + " does not exist.");
+                    return true;
+                }
+                DeathSign deathSign = DeathSignHandler.getDeathSignFromIdentifier(target.getUniqueId() + "." + sign);
+                if(deathSign == null){
+                    sender.sendMessage("§cDeathSign not found. Check the sign ID and try again.");
+                    return true;
+                }
+                String status = deathSign.getStatus();
+                if(status == null){
+                    sender.sendMessage("§cDeathSign not found.");
+                    return true;
+                }
+                if(status.equals("RECOVERED")){
+                    sender.sendMessage("§cYou already broke this deathsign.");
+                    return true;
+                }
+                if(status.equals("TAKEN")){
+                    sender.sendMessage("§cSomeone already broke this deathsign.");
+                    return true;
+                }
+                if(status.equals("DESTROYED")){
+                    sender.sendMessage("§cYou already destroyed this deathsign.");
+                    return true;
+                }
+                destroyConfirmPlayers.put(sender.getName(),deathSign);
+                sender.sendMessage(Main.plugin.getConfig().getString("destroy_command.confirm_message")
+                        .replace("{id}",sign+"").replace("&","§"));
+                if(destroyConfirmPlayerTasks.containsKey(sender.getName())){
+                    Bukkit.getScheduler().cancelTask(destroyConfirmPlayerTasks.get(sender.getName()));
+                }
+                int task = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+                    @Override
+                    public void run() {
+                        destroyConfirmPlayers.remove(sender.getName());
+                        destroyConfirmPlayerTasks.remove(sender.getName());
+                    }
+                },3600);//3min delay
+                destroyConfirmPlayerTasks.put(sender.getName(),task);
                 return true;
             }else if (args[0].equalsIgnoreCase("recover")){
                 if(!sender.hasPermission("deathsigns.admin")){
@@ -134,32 +312,36 @@ public class Main extends JavaPlugin {
                 int ramrecovered = 0;
                 int hdrecovered = 0;
                 File file = new File(getPlugin().getDataFolder() + "/Inventories/");
-                for(Map.Entry<Location, Inventory> s : ((HashMap<Location, Inventory>)openSigns).entrySet()){
-                    if(loc.getWorld().equals(s.getKey().getWorld())){
-                        if(loc.distance(s.getKey()) <= 10){
-                            for (ItemStack i : s.getValue().getContents()){
-                                if(i!=null) loc.getWorld().dropItem(s.getKey(), i);
+                for(DeathSign deathSign : DeathSignHandler.openSigns){
+                    if(loc.getWorld().equals(deathSign.location.getWorld())){
+                        if(loc.distance(deathSign.location) <= 10){
+                            for (ItemStack i :deathSign.getInventory().getContents()){
+                                if(i!=null) loc.getWorld().dropItem(deathSign.getLocation(), i);
                             }
-                            if(s.getKey().getBlock().getType().equals(Material.OAK_SIGN)) s.getKey().getBlock().setType(Material.AIR);
-                            if(s.getKey().getBlock().getRelative(0,-1,0).getType().equals(Material.CRYING_OBSIDIAN))s.getKey().getBlock().getRelative(0,-1,0).setType(Material.AIR);
-                            Conf.setStatus(s.getKey(),"RECOVERED");
-                            openSigns.remove(s.getKey());
+                            if(deathSign.getLocation().getBlock().getType().equals(Material.OAK_SIGN)) deathSign.getLocation().getBlock().setType(Material.AIR);
+                            if(deathSign.getLocation().getBlock().getRelative(0,-1,0).getType().equals(Material.CRYING_OBSIDIAN))deathSign.getLocation().getBlock().getRelative(0,-1,0).setType(Material.AIR);
+                            deathSign.setStatus("RECOVERED");
+                            DeathSignHandler.removeSign(deathSign);
                             ramrecovered++;
                         }
                     }
                 }
                 for(File f : file.listFiles()){
-                    Location locFromFile = locationFromString(f.getName().replace(".yml",""));
+                    Location locFromFile = Util.locationFromString(f.getName().replace(".yml",""));
                     if(loc.getWorld().equals(locFromFile.getWorld())){
                         if(loc.distance(locFromFile) <= 10){
-                            hdrecovered++;
-                            Map.Entry<ItemStack[], String> items = recallItems(locFromFile,true);
-                            for (ItemStack i : items.getKey()){
+                            //Map.Entry<ItemStack[], String> items = recallItems(locFromFile,true);
+                            DeathSign deathSign = DeathSignHandler.getDeathSignAtLoc(locFromFile);
+                            /*for (ItemStack i : deathSign.getInventory().getContents()){
                                 if(i!=null) locFromFile.getWorld().dropItem(locFromFile, i);
                             }
                             if(locFromFile.getBlock().getType().equals(Material.OAK_SIGN)) locFromFile.getBlock().setType(Material.AIR);
                             if(locFromFile.getBlock().getRelative(0,-1,0).getType().equals(Material.CRYING_OBSIDIAN))locFromFile.getBlock().getRelative(0,-1,0).setType(Material.AIR);
-                            Conf.setStatus(locFromFile,"RECOVERED");
+                            deathSign.setStatus("RECOVERED");*/
+                            if(deathSign != null){
+                                deathSign.breakSign(p);
+                                hdrecovered++;
+                            }
                         }
                     }
                 }
@@ -169,17 +351,110 @@ public class Main extends JavaPlugin {
                     sender.sendMessage("§aRecovered §6" + ramrecovered + "§a sign(s) from RAM, and §6" + hdrecovered + "§a sign(s) from disk.");
                 }
                 return true;
-            }else if (args[0].equalsIgnoreCase("test")){
+            }else if (args[0].equalsIgnoreCase("confirm")){
+                if(destroyConfirmPlayers.containsKey(((Player)sender).getName())){
+                    DeathSign sign = destroyConfirmPlayers.get(sender.getName());
+
+                    String status = sign.getStatus();
+                    if(status == null){
+                        sender.sendMessage("§cDeathSign not found.");
+                        return true;
+                    }
+                    if(status.equals("RECOVERED")){
+                        sender.sendMessage("§cYou already broke this deathsign.");
+                        return true;
+                    }
+                    if(status.equals("TAKEN")){
+                        sender.sendMessage("§cSomeone already broke this deathsign.");
+                        return true;
+                    }
+                    if(status.equals("DESTROYED")){
+                        sender.sendMessage("§cThis deathsign was already destroyed.");
+                        return true;
+                    }
+
+                    sign.selfDestruct();
+                    destroyConfirmPlayers.remove(sender.getName());
+                    destroyConfirmPlayerTasks.remove(sender.getName());
+                    sender.sendMessage(Main.plugin.getConfig().getString("destroy_command.confirmed_message").replace("{id}",sign.id+"").replace("&","§"));
+                }else{
+                    sender.sendMessage("§cThere is no pending confirmation request.");
+                }
+                return true;
+            }else if (args[0].equalsIgnoreCase("retroupgrade")){
                 if(!sender.hasPermission("deathsigns.admin")){
-                    sender.sendMessage("§cYou do not have permission to recover graves.");
+                    sender.sendMessage("§cYou do not have permission to upgrade the config.");
                     return true;
                 }
-                Player p = (Player) sender;
-                Location l1 = p.getLocation().getBlock().getLocation().clone().add(.5,0,.5), l2 = l1.clone().add(0,1,0);
-                p.getWorld().playSound(l1, Sound.BLOCK_WOOD_BREAK,1,1);
-                p.getWorld().spawnParticle(Particle.BLOCK_DUST, l1, 50, .5,.5,.5, Material.OAK_PLANKS.createBlockData());
-                p.getWorld().playSound(l2, Sound.BLOCK_STONE_BREAK,1,1);
-                p.getWorld().spawnParticle(Particle.BLOCK_DUST, l2, 50, .5,.5,.5, Material.CRYING_OBSIDIAN.createBlockData());
+
+                long timeBefore = System.currentTimeMillis();
+                int upgraded = 0;
+                int errors = 0;
+
+                File inventoryFolder = new File(Main.getPlugin().getDataFolder() + "/Inventories");
+                for(File f : inventoryFolder.listFiles()){
+                    if(f.getName().endsWith(".yml"))f.renameTo(new File(inventoryFolder + "/" + f.getName().replace(".yml","").replace(".",",") + ".yml"));
+                }
+
+                File signFile = new File(Main.getPlugin().getDataFolder() + "/sign_locations.yml");
+                YamlConfiguration conf = new YamlConfiguration();
+                try {
+                    conf.load(signFile);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                for(String uuid : conf.getConfigurationSection("signs").getKeys(false)){
+                    UUID uid = UUID.fromString(uuid);
+                    int id = 1;
+                    if(Conf.storage.getConfig().contains("player." + uuid + ".last_id")){
+                        id = Conf.storage.getConfig().getInt("player." + uuid + ".last_id") + 1;
+                    }
+                    Conf.storage.getConfig().set("player." + uuid + ".last_id", id);
+
+                    for(String locstr : conf.getConfigurationSection("signs." + uuid).getKeys(false)){
+                        try {
+                            Location loc = Util.locationFromString(locstr.replace(".",","));
+                            Conf.storage.getConfig().set("player." + uid + ".deaths." + id + ".status",
+                                    conf.getString("signs." + uuid + "." + locstr.replace(".",",") + ".status"));
+
+                            Conf.storage.getConfig().set("player." + uid + ".deaths." + id + ".status_time",
+                                    conf.getLong("signs." + uuid + "." + locstr.replace(".",",") + ".status_time"));
+
+                            Conf.storage.getConfig().set("player." + uid + ".deaths." + id + ".time",
+                                    conf.getLong("signs." + uuid + "." + locstr.replace(".",",") + ".time"));
+
+                            Conf.storage.getConfig().set("player." + uid + ".deaths." + id + ".loc", locstr);
+
+                            String deathMessage = "Unknown DeathSign";
+
+                            File f = new File(Main.plugin.getDataFolder() + "/Inventories/" + locstr + ".yml");
+                            /*if(!f.exists()){
+                                f = new File(Main.plugin.getDataFolder() + "/Inventories/" + locstr.replace(",","."));
+                            }*/
+                            if(f.exists()){
+                                try {
+                                    YamlConfiguration con = new YamlConfiguration();
+                                    con.load(f);
+                                    if(con.contains("inventory.title")){
+                                        deathMessage = con.getString("inventory.title");
+                                    }
+                                }catch (Exception e){
+
+                                }
+                            }
+
+                            Conf.storage.getConfig().set("player." + uid + ".deaths." + id + ".death_message", deathMessage);
+                            upgraded++;
+                        }catch (Exception e){
+                            errors++;
+                        }
+                        Conf.storage.getConfig().set("player." + uuid + ".last_id", id);
+                        id++;
+                    }
+                }
+                Conf.storage.save();
+                sender.sendMessage("Upgraded " + upgraded + " signs in " + (System.currentTimeMillis() - timeBefore) + " ms with " + errors + " errors.");
                 return true;
             }else if (args[0].equalsIgnoreCase("reload")){
                 if(!sender.hasPermission("deathsigns.admin")){
@@ -187,13 +462,69 @@ public class Main extends JavaPlugin {
                     return true;
                 }
                 reloadConfig();
+                sender.sendMessage("§7The config was reloaded.");
                 return true;
-            }
+            }else if (args[0].equalsIgnoreCase("demosign")){
+                if(!sender.hasPermission("deathsigns.admin")){
+                    sender.sendMessage("§cYou do not have permission to create demo signs.");
+                    return true;
+                }
+                Player player = ((Player)sender);
+
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern(Main.plugin.getConfig().getString("time_format"));
+                LocalDateTime now = LocalDateTime.now();
+                String dateTimeString = dtf.format(now);
+
+                Block baseBlock = player.getLocation().getBlock();
+                Block signBlock = baseBlock.getRelative(BlockFace.UP);
+                baseBlock.setType(Material.CRYING_OBSIDIAN);
+                signBlock.setType(Material.OAK_SIGN);
+                Sign sign = (Sign) signBlock.getState();
+                sign.setLine(0,"§0§lR.I.P.");
+                sign.setLine(1,player.getName());
+                sign.setLine(3,dateTimeString);
+                double rotation = 0;
+                try {
+                    rotation = (player.getLocation().getYaw() - 90) % 360;//taken from worldedit or something
+                }catch (Exception e){
+
+                }
+                if (rotation < 0) {
+                    rotation += 360.0;
+                }
+                byte signRotation = (byte) Math.round(rotation / 22.5);//gets 0-15 from 0-360
+                if(signRotation < 0) signRotation = 0;
+                signRotation+=4;//rotate sign by 90 degrees
+                if(signRotation >= 16)signRotation-=16;
+                sign.setRawData((byte) signRotation);//is there a better way to rotate signs??
+                sign.update();
+
+                return true;
+            }else if (args[0].equalsIgnoreCase("testthedupeglitch")){
+                if(!sender.hasPermission("deathsigns.admin")){
+                    sender.sendMessage("§cYou do not have permission to test dupe glitches!");
+                    return true;
+                }
+                if(Bukkit.getOnlinePlayers().size() < 2){
+                    sender.sendMessage("There are not enough players online to test the dupe glitch.");
+                    return true;
+                }
+                Block block = ((Player)sender).getTargetBlockExact(10,FluidCollisionMode.NEVER);
+                List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
+                Player p1 = onlinePlayers.get(0);
+                Player p2 = onlinePlayers.get(1);
+                PlayerInteractEvent event1 = new PlayerInteractEvent(p1, Action.RIGHT_CLICK_BLOCK, null, block, BlockFace.UP, EquipmentSlot.HAND);
+                Bukkit.getPluginManager().callEvent(event1);
+                PlayerInteractEvent event2 = new PlayerInteractEvent(p2, Action.RIGHT_CLICK_BLOCK, null, block, BlockFace.UP, EquipmentSlot.HAND);
+                Bukkit.getPluginManager().callEvent(event2);
+                sender.sendMessage("Called test events for " + p1.getName() + " and " + p2.getName());
+                return true;
+            }else return false;
         }
         if(sender.hasPermission("deathsigns.admin")){
-            sender.sendMessage("§cAdmin Usage: /deathsigns <§4reload | recover§c | enable | disable | list> §4[player]");
+            sender.sendMessage("§cAdmin Usage: /deathsigns <§4reload | recover§c | compass | destroy | enable | disable | list> §4[player] §c[page]");
         }else{
-            sender.sendMessage("§cUsage: /deathsigns <enable | disable | list>");
+            sender.sendMessage("§cUsage: /deathsigns <compass | enable | disable | destroy | list>");
         }
         return true;
     }
@@ -205,106 +536,10 @@ public class Main extends JavaPlugin {
         }
     }
 
-    public static void spawnDeathSign(Block block, Player player, ItemStack[] items, String deathMessage) {
-        log("§c" + player.getName() + "'s grave was spawned at " + block.getX() + ", " + (block.getY() + 1) + ", " + block.getZ() + " in " + block.getWorld().getName() + ".");
+    /*
+    */
 
-        player.sendMessage(Main.getPlugin().getConfig().getString("deathPrivateMessage")
-                .replace("{x}",block.getX()+"")
-                .replace("{y}",(block.getY()+1)+"")
-                .replace("{z}",block.getZ()+"")
-                .replace("{world}",block.getWorld().getName())
-        );
 
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm MMM/dd/yy");
-        LocalDateTime now = LocalDateTime.now();
-        String dateTimeString = dtf.format(now);
-
-        Block signBlock = block.getRelative(0,1,0);
-        block.setType(Material.CRYING_OBSIDIAN);
-        signBlock.setType(Material.OAK_SIGN);
-        Sign sign = (Sign) signBlock.getState();
-        sign.setLine(0,"§lR.I.P.");
-        sign.setLine(1,player.getName());
-        sign.setLine(3,dateTimeString);
-        double rotation = (player.getLocation().getYaw() - 90) % 360;//taken from worldedit or something
-        if (rotation < 0) {
-            rotation += 360.0;
-        }
-        byte signRotation = (byte) Math.round(rotation / 22.5);//gets 0-15 from 0-360
-        if(signRotation < 0) signRotation = 0;
-        signRotation+=4;//rotate sign by 90 degrees
-        if(signRotation >= 16)signRotation-=16;
-        sign.setRawData((byte) signRotation);//is there a better way to rotate signs??
-        sign.update();
-        Bukkit.getScheduler().runTaskAsynchronously(getPlugin(), new Runnable(){
-            @Override
-            public void run() {
-                try {
-                    saveItems(signBlock.getLocation(), items,deathMessage);
-                    Conf.addSign(signBlock.getLocation(),player.getUniqueId());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        Inventory inv = Bukkit.createInventory(null, 45, "§0" + deathMessage);
-        inv.setContents(items);
-        openSigns.put(signBlock.getLocation(),inv);
-
-        Location l1 = sign.getLocation().clone().add(.5,0,.5), l2 = block.getLocation().clone().add(.5,0,.5);
-        player.getWorld().playSound(l1, Sound.BLOCK_WOOD_BREAK,1,1);
-        player.getWorld().spawnParticle(Particle.BLOCK_DUST, l1, 50, .5,.5,.5, Material.OAK_PLANKS.createBlockData());
-        player.getWorld().playSound(l2, Sound.BLOCK_STONE_BREAK,1,1);
-        player.getWorld().spawnParticle(Particle.BLOCK_DUST, l2, 50, .5,.5,.5, Material.CRYING_OBSIDIAN.createBlockData());
-        //player.getWorld().spawnParticle(Particle.BLOCK_DUST, sign.getLocation(), 100, new MaterialData(Material.OAK_PLANKS));
-        //player.getWorld().spawnParticle(Particle.BLOCK_DUST, block.getLocation(), 100, new MaterialData(Material.CRYING_OBSIDIAN));
-    }
-    public Location locationFromString(String locString) {
-        String[] s = locString.split("\\.");
-        return new Location(Bukkit.getWorld(s[0]), Integer.parseInt(s[1]), Integer.parseInt(s[2]),Integer.parseInt(s[3]));
-    }
-    public static String locationToString(Location loc) {//just turns a location into a string
-        return loc.getWorld().getName() + "." + loc.getBlockX() + "." +loc.getBlockY() + "." +loc.getBlockZ();
-    }
-
-    public static void saveItems(Location loc, ItemStack[] items, String title) throws IOException {//saves items to file based on location
-        YamlConfiguration c = new YamlConfiguration();
-        File file = new File(getPlugin().getDataFolder() + "/Inventories/", locationToString(loc) + ".yml");
-        if(file.exists()){
-            try {
-                c.load(file);
-            } catch (InvalidConfigurationException e) {
-                Bukkit.getLogger().warning("Could not save " + file.getAbsolutePath());
-                e.printStackTrace();
-            }
-        }
-        c.set("inventory.content", items);
-        if(title != null)c.set("inventory.title", title);
-        c.save(file);
-    }
-
-    public static Map.Entry<ItemStack[],String> recallItems(Location loc, boolean delete){//recalls items from file based on location, then deletes the file
-        File file = new File(getPlugin().getDataFolder() + "/Inventories/", locationToString(loc) + ".yml");
-        if(!file.exists()) return null;
-        YamlConfiguration c = YamlConfiguration.loadConfiguration(file);
-        ItemStack[] items = ((List<ItemStack>) c.get("inventory.content")).toArray(new ItemStack[0]);
-        String title = null;
-        if(c.contains("inventory.title"))title = c.getString("inventory.title");
-        if(delete)deleteSignFile(file);
-        return new AbstractMap.SimpleEntry<ItemStack[],String>(items,title);
-    }
-
-    public static void deleteSignFile(Location sign){
-        File file = new File(getPlugin().getDataFolder() + "/Inventories/", locationToString(sign) + ".yml");
-        deleteSignFile(file);
-    }
-    public static void deleteSignFile(File file){
-        try {
-            file.delete();
-        }catch (Exception e){
-            Bukkit.getLogger().warning("Delete sign file failed! " + file.getAbsolutePath());
-        }
-    }
 
 
 }

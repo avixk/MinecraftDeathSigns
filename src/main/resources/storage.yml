@@ -1,0 +1,11 @@
+version: 2 # DO NOT MODIFY!
+player:
+  UUIDHERE:
+    last_id: 1
+    free_signs: 3
+    deaths:
+      1:
+        loc: 'world,-565,66,-422'
+        status: PROTECTED
+        status_time: 1611770143826
+        time: 1611770143826
