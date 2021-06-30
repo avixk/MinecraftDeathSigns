@@ -764,9 +764,9 @@ public class Events implements Listener {
 
             if (Main.plugin.getConfig().getBoolean("death_compass.give_on_respawn.enabled")) {
                 if (Main.plugin.getConfig().getBoolean("death_compass.give_on_respawn.require_permission")
-                        && !e.getPlayer().hasPermission("death_compass.compass.on_respawn")) return;
+                        && !e.getPlayer().hasPermission("deathsigns.compass.on_respawn")) return;
                 if (Main.plugin.getConfig().getBoolean("death_compass.require_permission")
-                        && !e.getPlayer().hasPermission("death_compass.compass")) return;
+                        && !e.getPlayer().hasPermission("deathsigns.compass")) return;
                 if (Main.plugin.getConfig().getBoolean("death_compass.only_give_if_respawn_world.enabled")
                         && !Main.plugin.getConfig().getStringList("death_compass.only_give_if_respawn_world.worlds")
                         .contains(e.getRespawnLocation().getWorld().getName())) return;

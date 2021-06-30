@@ -31,7 +31,7 @@ death_private_message:
  # if true, deathsigns will only spawn for players with permission deathsigns.deathsign
 deathsigns_require_permission: false # permission: deathsigns.deathsign
 
-bounties_disable_deathsigns: true # REQUIRES BOUNTIES
+bounties_disable_deathsigns: false # REQUIRES BOUNTIES (currently a private plugin)
 
  # settings for deathsign compasses
  # available placeholders:

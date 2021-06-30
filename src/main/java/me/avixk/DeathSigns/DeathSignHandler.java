@@ -58,9 +58,12 @@ public class DeathSignHandler {
                 if(loadedSign.owner.toString().equals(uuid) && id.equals(loadedSign.id + ""))
                     return loadedSign;
             }
-            DeathSign deathSign = new DeathSign(UUID.fromString(uuid),Util.locationFromString(Conf.storage.getConfig().getString("player." + uuid + ".deaths." + id + ".loc")),null, Integer.parseInt(id));
-            openSigns.add(deathSign);
-            return deathSign;
+            Location location = Util.locationFromString(Conf.storage.getConfig().getString("player." + uuid + ".deaths." + id + ".loc"));
+            if(location != null){
+                DeathSign deathSign = new DeathSign(UUID.fromString(uuid),location,null, Integer.parseInt(id));
+                openSigns.add(deathSign);
+                return deathSign;
+            }
         }catch (Exception e){
 
         }
@@ -119,7 +122,7 @@ public class DeathSignHandler {
     }
     public static DeathSign getLoadedDeathSign(Location loc){
         for(DeathSign sign : openSigns){
-            if(sign.location.equals(loc))
+            if(sign.location != null && sign.location.equals(loc))
                 return sign;
         }
         return null;
