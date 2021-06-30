@@ -88,6 +88,7 @@ public class Events implements Listener {
         }
 
         if (drops.isEmpty()) {
+            event.getDrops().clear();
             Main.getPlugin().getLogger().info("§c" + event.getEntity().getName() + "'s inventory is empty, no DeathSign will be placed.'");
             return;
         }
