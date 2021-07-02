@@ -72,10 +72,11 @@ public class Events implements Listener {
             if (i.getType().name().contains("BANNER")) {
                 if (i.hasItemMeta())
                     if (i.getItemMeta().hasDisplayName())
-                        if (i.getItemMeta().getDisplayName().contains("The Flag"))
+                        if (i.getItemMeta().getDisplayName().contains("The Flag")){
                             // If a banner has "The Flag" in the name, it will fall out of deathsigns :)
                             event.getEntity().getWorld().dropItem(event.getEntity().getEyeLocation(), i);
-                drops.remove(i);
+                            drops.remove(i);
+                        }
             }else if(i.getType().equals(Material.COMPASS)){
                 CompassMeta meta = (CompassMeta) i.getItemMeta();
                 if (meta != null && meta.hasLodestone()) {
