@@ -105,6 +105,7 @@ list_status_strings:
   OPENED_OWNER: "&2Opened"
   OPENED_OTHER: "&4Breached"
   DESTROYED: "&4Destroyed"
+  DEMO: "&dDemo"
 
 destroy_command:
   require_permission: false

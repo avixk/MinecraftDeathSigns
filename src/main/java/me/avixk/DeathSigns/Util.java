@@ -14,6 +14,21 @@ import java.util.List;
 
 public class Util {
 
+    public static String arrayToString(String[] args, int skipFirst){
+        String out = "";
+        for(String arg : args){
+            if(skipFirst > 0){
+                skipFirst--;
+                continue;
+            }
+            out += arg + " ";
+        }
+        return out.trim();
+    }
+    public static String arrayToString(String[] args){
+        return arrayToString(args,0);
+    }
+
     public static ItemStack getLodestoneCompass(Location location){
         ItemStack compass = new ItemStack(Material.COMPASS);
         CompassMeta meta = (CompassMeta) Bukkit.getItemFactory().getItemMeta(compass.getType());

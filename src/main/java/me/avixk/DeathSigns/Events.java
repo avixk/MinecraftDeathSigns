@@ -191,7 +191,7 @@ public class Events implements Listener {
             Bukkit.getScheduler().scheduleSyncDelayedTask(Main.getPlugin(), new Runnable() {
                 @Override
                 public void run() {
-                    DeathSign sign = DeathSignHandler.createDeathSign((ItemStack[]) drops.toArray(new ItemStack[drops.size()]), event.getEntity().getUniqueId(), finalSpawnLocation,event.getDeathMessage()==null?"Questionable DeathSign":event.getDeathMessage());
+                    DeathSign sign = DeathSignHandler.createDeathSign((ItemStack[]) drops.toArray(new ItemStack[drops.size()]), event.getEntity().getUniqueId(), finalSpawnLocation,event.getDeathMessage()==null?"Questionable DeathSign":event.getDeathMessage(),false);
                     sign.spawn();
                     recentDeathSigns.put(event.getEntity().getUniqueId(),sign);
                     //Main.spawnDeathSign(nearbyBlock, event.getEntity(), items.toArray(new ItemStack[0]), "§0" + event.getDeathMessage());
@@ -636,8 +636,8 @@ public class Events implements Listener {
             if(sign.getLine(0).equals("§0§lR.I.P.")){
                 event.getPlayer().sendMessage("§cThis sign is protected §eforever§c.");
                 return;
-            }
-            if (!sign.getLine(0).equals("§lR.I.P.")) return;
+            }else if (!sign.getLine(0).equals("§lR.I.P.")) return;
+
             Block b = event.getPlayer().getTargetBlockExact(10,FluidCollisionMode.NEVER);
             if(b == null || !b.getType().equals(event.getClickedBlock().getType()))return;
             DeathSign deathSign = DeathSignHandler.getDeathSignAtLoc(event.getClickedBlock().getLocation());
@@ -648,7 +648,7 @@ public class Events implements Listener {
                     YamlConfiguration c = YamlConfiguration.loadConfiguration(file);
                     ItemStack[] items = ((List<ItemStack>) c.get("inventory.content")).toArray(new ItemStack[0]);
                     String title = c.contains("inventory.title")?c.getString("inventory.title"):"Unknown DeathSign";
-                    deathSign = DeathSignHandler.createDeathSign(items, UUID.fromString("00000000-0000-0000-0000-000000000000"), event.getClickedBlock().getLocation(),title);
+                    deathSign = DeathSignHandler.createDeathSign(items, UUID.fromString("00000000-0000-0000-0000-000000000000"), event.getClickedBlock().getLocation(),title,false);
                 }
             }
             if (deathSign == null) {

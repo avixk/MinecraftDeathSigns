@@ -3,7 +3,6 @@ package me.avixk.DeathSigns;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -15,9 +14,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 public class Main extends JavaPlugin {
     public static Main plugin;
@@ -471,7 +471,16 @@ public class Main extends JavaPlugin {
                 }
                 Player player = ((Player)sender);
 
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern(Main.plugin.getConfig().getString("time_format"));
+                String title = "Demo Sign";
+                if(args.length > 1){
+                    title = Util.arrayToString(args,1);
+                }
+
+                DeathSign sign = DeathSignHandler.createDeathSign(player.getInventory().getContents(), player.getUniqueId(), player.getEyeLocation(),title,true);
+                sign.spawn();
+                Events.recentDeathSigns.put(player.getUniqueId(),sign);
+
+                /*DateTimeFormatter dtf = DateTimeFormatter.ofPattern(Main.plugin.getConfig().getString("time_format"));
                 LocalDateTime now = LocalDateTime.now();
                 String dateTimeString = dtf.format(now);
 
@@ -497,7 +506,7 @@ public class Main extends JavaPlugin {
                 signRotation+=4;//rotate sign by 90 degrees
                 if(signRotation >= 16)signRotation-=16;
                 sign.setRawData((byte) signRotation);//is there a better way to rotate signs??
-                sign.update();
+                sign.update();*/
 
                 return true;
             }else if (args[0].equalsIgnoreCase("testthedupeglitch")){

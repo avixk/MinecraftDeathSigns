@@ -1,9 +1,7 @@
 package me.avixk.DeathSigns;
 
 import me.avixk.HeadHunting.BountyAPI;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
 
 public class BountyHook {
     public static BountyAPI bountyAPI;
