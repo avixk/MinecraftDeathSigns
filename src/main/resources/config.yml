@@ -85,8 +85,9 @@ broadcastSignsToAdmins: false
 
  # Max number of death signs to show in /deathsigns list
 list_page_size: 8
-list_top_text: "&7┌[&#b80000&lD&#af0404&le&#a70808&la&#9f0d0d&lt&#971111&lh&#8f1515&lS&#871a1a&li&#7f1e1e&lg&#772222&ln&#6f2727&ls &fv{version} &7&oby avixk &f&l| &c&l{player}&7&l's recent DeathSigns:"
-list_bottom_text: "&7└ &7Page &c{page}&7 of &c{pages} &8&o/ds list [page]"
+list_top_text: "&8╔[&#b80000&lD&#af0404&le&#a70808&la&#9f0d0d&lt&#971111&lh&#8f1515&lS&#871a1a&li&#7f1e1e&lg&#772222&ln&#6f2727&ls &7v{version} &8&l| &4{player}&7's recent DeathSigns:"
+list_bottom_text: "&8╚[ &7Page &c{page}&7 of &c{pages}&8 ]"
+list_format_no_deathsigns: "&8╚[ &c&oNo DeathSigns Found.&8 ]"
  # Placeholders:
  #  {world} - world the sign is located
  #  {X}, {Y}, %Z} - coords of the sign
@@ -94,9 +95,8 @@ list_bottom_text: "&7└ &7Page &c{page}&7 of &c{pages} &8&o/ds list [page]"
  #  {status_time} - how long ago the status was updated
  #  {time} - how long ago the sign spawned
  #  {id} - used to select deathsigns
-list_format: "&7├ &f{id}. &7In &f{world} &7| &f{X}&7, &f{Y}&7, &f{Z} &7| Spawned &c{time}&7 ago  \n&7│    &8 [{status}&8] &7as of &c{status_time} &7ago"
-list_format_error: "&7├ &f{id}. &cInvalid DeathSign\n&7│" # Always plan for failure. This format will be used if the config entry is malformed or the world is removed.
-list_format_no_deathsigns: "&7└ &c&oNo DeathSigns Found."
+list_format: "&8╟┬[&f{id}&8] &7In &f{world} &7| &f{X}&7, &f{Y}&7, &f{Z} &7| Spawned &c{time}&7 ago  \n&8║&0╵&8└─&8[{status}&8] &7as of &c{status_time} &7ago"
+list_format_error: "&8╟─[&f{id}&8] &cInvalid DeathSign\n&8║" # Always plan for failure. This format will be used if the config entry is malformed or the world is removed.
 list_status_strings:
   RECOVERED: "&2Recovered"
   TAKEN: "&4Taken"
